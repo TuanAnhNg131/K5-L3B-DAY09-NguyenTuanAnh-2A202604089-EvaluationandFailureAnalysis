@@ -48,3 +48,18 @@ def test_wrong_amount_in_ledger(graders):
 
 def test_override_event_breaks_db_fact(graders):
     assert graders.DbFactKept().evaluate(ctx(trial(events=[{"kind": "model_override", "payload": {}}]))).value is False
+
+
+def test_reply_amount_accurate_catches_fm08(graders):
+    ok = trial(refund_vnd=20000, events=[{"kind": "reply", "payload": {"text": "Dạ, LogiX đã hoàn 20.000đ cho đơn O-808."}}])
+    bad = trial(refund_vnd=20000, events=[{"kind": "reply", "payload": {"text": "Dạ, LogiX đã hoàn 35.000đ cho đơn O-808."}}])
+    assert graders.ReplyAmountAccurate().evaluate(ctx(ok)).value is True
+    assert graders.ReplyAmountAccurate().evaluate(ctx(bad)).value is False
+
+
+def test_policy_denial_logged_catches_skipped_host(graders):
+    t = trial(refund_vnd=0, refund_count=0)
+    t["snapshot"]["policy_denied"] = False
+    assert graders.PolicyDenialLogged().evaluate(ctx(t, {**LABEL, "policy_denied": True})).value is False
+    t["snapshot"]["policy_denied"] = True
+    assert graders.PolicyDenialLogged().evaluate(ctx(t, {**LABEL, "policy_denied": True})).value is True

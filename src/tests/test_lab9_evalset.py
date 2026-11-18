@@ -57,3 +57,20 @@ def test_check_rejects_missing_tags(tmp_path, evalset_cli):
     result = evalset_cli("--check")
     assert result.returncode == 1, result.stdout + result.stderr
     assert "failure_modes empty" in result.stdout
+
+
+@pytest.mark.student
+def test_trace_case_c002_regression_vs_fixed(monkeypatch):
+    from lab9.trace_case import investigate
+
+    monkeypatch.chdir(Path(__file__).resolve().parents[1])
+    bad = investigate("seeded_regression", "C-002", 11)["trial"]
+    good = investigate("fixed", "C-002", 11)["trial"]
+
+    assert bad["lab8_pass"] is False
+    assert any(e.get("kind") == "model_override" and e.get("payload") == {"delay_days": 5} for e in bad["events"])
+    assert bad["snapshot"]["refund_vnd"] == 20000
+
+    assert good["lab8_pass"] is True
+    assert not any(e.get("kind") == "model_override" for e in good["events"])
+    assert good["snapshot"]["refund_vnd"] == 0
